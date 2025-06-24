@@ -26,14 +26,15 @@ if st.button("Predict Energy Consumption"):
     prediction = model.predict(input_data)[0]
     st.success(f"Predicted Energy Consumption: **{prediction:.4f} mKWh**")
 
-    # Footer Section
-    st.markdown("---")
-    st.markdown(
-        """
-        <div style='text-align: center; font-size: 14px;'>
-            Developed by <strong>Adewale Ogabi</strong> | 
-            <a href='https://www.linkedin.com/in/ogabiadewale' target='_blank'>LinkedIn Profile</a>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+
+# -------------------- Footer -----------------------
+st.markdown("---")
+st.markdown(
+    """
+    <div style='text-align: center; font-size: 14px;'>
+        Developed by <strong>Adewale Ogabi</strong> | 
+        <a href='https://www.linkedin.com/in/ogabiadewale' target='_blank'>LinkedIn Profile</a>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
