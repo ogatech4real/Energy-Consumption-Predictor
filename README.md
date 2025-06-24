@@ -1,7 +1,7 @@
 **Title:**
 An Open-Source Approach to Predictive Energy Consumption Using Industrial Process Parameters and Streamlit-Based Web Interface
 
-**Abstract:**
+**Overview:**
 The integration of artificial intelligence (AI) with industrial automation enables more efficient energy management through predictive analytics. This paper presents a practical methodology for predicting instantaneous energy consumption using environmental and process temperature data. Leveraging open-source tools such as Python, Scikit-learn, and Streamlit, this project replaces proprietary platforms like MATLAB with accessible alternatives, thereby democratizing access to advanced analytics. The methodology, model development, and graphical user interface (GUI) design are detailed with clarity to support adoption by non-programmers and control engineers alike.
 
 **1. Introduction**
