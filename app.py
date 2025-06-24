@@ -10,9 +10,10 @@ st.set_page_config(page_title="Energy Consumption Predictor", layout="centered")
 
 st.title("Predict Energy Consumption")
 st.markdown("""
-Use this tool to estimate **energy consumption** based on:
+This tool is used to estimate **energy consumption** based on:
 - Process Temperature
 - Environmental Temperature
+Read more here: https://shorturl.at/6mFjR
 """)
 
 # Input form
@@ -24,3 +25,15 @@ if st.button("Predict Energy Consumption"):
     input_data = pd.DataFrame([[proc_temp, env_temp]], columns=['ProcTemp', 'EnvTemp'])
     prediction = model.predict(input_data)[0]
     st.success(f"Predicted Energy Consumption: **{prediction:.4f} mKWh**")
+
+    # Footer Section
+    st.markdown("---")
+    st.markdown(
+        """
+        <div style='text-align: center; font-size: 14px;'>
+            Developed by <strong>Adewale Ogabi</strong> | 
+            <a href='https://www.linkedin.com/in/ogabiadewale' target='_blank'>LinkedIn Profile</a>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
