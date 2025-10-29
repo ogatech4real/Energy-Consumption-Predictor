@@ -1,0 +1,817 @@
+[
+    {
+        "id": "4b1533c7dd9707a3",
+        "type": "tab",
+        "label": "SmartProcessIIoT_Node-RED_flow",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "7c435a1ea8fc3823",
+        "type": "json",
+        "z": "4b1533c7dd9707a3",
+        "name": "",
+        "property": "payload",
+        "action": "",
+        "pretty": true,
+        "x": 170,
+        "y": 320,
+        "wires": [
+            [
+                "8e1195c36d8f494a",
+                "e2c637b56b41f34a",
+                "5b2563bdb0f51232",
+                "cc8c132ec6145c67",
+                "83262dfdf9f5a19b",
+                "2d5dc691d8e015b8",
+                "cce04f909f4ad758"
+            ]
+        ]
+    },
+    {
+        "id": "a61c290dce031858",
+        "type": "serial in",
+        "z": "4b1533c7dd9707a3",
+        "name": "Processor",
+        "serial": "be4dc04b8741d3e0",
+        "x": 80,
+        "y": 180,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "8e1195c36d8f494a",
+        "type": "function",
+        "z": "4b1533c7dd9707a3",
+        "name": "TempFn",
+        "func": "var temp = msg.payload.temperature;\n\n// Create separate messages for temperature and current\nvar temperatureMsg = { payload: temp };\n\n// Send both messages separately\nreturn [temperatureMsg];",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 400,
+        "y": 180,
+        "wires": [
+            [
+                "6db26c0e478979d5",
+                "4f528f11cab02321"
+            ]
+        ]
+    },
+    {
+        "id": "e2c637b56b41f34a",
+        "type": "function",
+        "z": "4b1533c7dd9707a3",
+        "name": "CurrentFn",
+        "func": "var current = msg.payload.current;\n\n// Create separate messages for temperature and current\nvar currentMsg = { payload: current };\n\n// Send both messages separately\nreturn [currentMsg];",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 400,
+        "y": 260,
+        "wires": [
+            [
+                "a261134d0962c804",
+                "a6cd72f44ebe297f"
+            ]
+        ]
+    },
+    {
+        "id": "7520e3d095206fa4",
+        "type": "inject",
+        "z": "4b1533c7dd9707a3",
+        "name": "Reset",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "900",
+        "crontab": "",
+        "once": false,
+        "onceDelay": "3600",
+        "topic": "send",
+        "payload": "send",
+        "payloadType": "str",
+        "x": 140,
+        "y": 80,
+        "wires": [
+            [
+                "5b2563bdb0f51232"
+            ]
+        ]
+    },
+    {
+        "id": "5b2563bdb0f51232",
+        "type": "function",
+        "z": "4b1533c7dd9707a3",
+        "name": "energy2table",
+        "func": "let voltage = 230; // Constant supply voltage\nlet current = msg.payload.current || 0; // Current in Amps (default 0 if undefined)\nlet time_interval_ms = msg.payload.time || 1000; // Time interval in milliseconds (default 1 second)\n\n// Convert time interval to hours\nlet time_interval_hours = time_interval_ms / 36000000; // Convert ms to hours\n\n// Calculate instantaneous energy consumption\nlet energy = voltage * current * time_interval_hours; // Energy in Wh\n\n// Retrieve cumulative energy from flow memory (initialize if not set)\nlet cumulativeEnergy = flow.get(\"cumulativeEnergy\") || 0;\n\n// Add the new energy consumed in this time interval\ncumulativeEnergy += energy;\n\n// Store the updated cumulative energy back to the flow\nflow.set(\"cumulativeEnergy\", cumulativeEnergy);\n\n// If triggered by inject node (every 15 minutes), send cumulative energy and reset it\nif (msg.topic === \"send\") {\n    let timestamp = new Date().toLocaleTimeString(); // Get current time\n\n    // Create output message\n    msg.payload = {\n        time: timestamp,\n        energy: cumulativeEnergy.toFixed(2) // Round to 2 decimal places\n    };\n\n    // Reset cumulative energy after sending\n    flow.set(\"cumulativeEnergy\", 0);\n\n    return msg;\n} else {\n    return null; // Do not send data unless the inject node triggers\n}\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 330,
+        "y": 100,
+        "wires": [
+            [
+                "5a1660a20c1d6524"
+            ]
+        ]
+    },
+    {
+        "id": "5a1660a20c1d6524",
+        "type": "function",
+        "z": "4b1533c7dd9707a3",
+        "name": "SendEnergy",
+        "func": "// Read the current time and energy values when the inject node triggers\nlet timestamp = new Date().toLocaleTimeString(); // Current time\nlet energy = msg.payload.energy || \"0.00\"; // Energy value from payload, default to 0.00\n\n// Retrieve the stored array of entries (if any) from flow memory\nlet entries = flow.get(\"energyEntries\") || [];\nlet injectCount = flow.get(\"injectCount\") || 0; // Track the number of injects\n\n// Increment the inject count\ninjectCount++;\n// Clear entries and reset count on the 6th inject\nif (injectCount > 5) {\n    entries = [];  // Reset the entries\n    injectCount = 1; // Restart count from 1 for the new cycle\n}\n\n// Add the new entry with the unit\nentries.push(`${timestamp}, ${energy} mWh`);\n\n// Store the updated list and count back to flow memory\nflow.set(\"energyEntries\", entries);\nflow.set(\"injectCount\", injectCount);\n\n// Format the entries for display with <br> for line breaks\nlet displayText = entries.join(\"<br>\");\n\n// Pass the updated text as msg.payload for display\nmsg.payload = displayText;\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 490,
+        "y": 60,
+        "wires": [
+            [
+                "79e334b89ce3f913"
+            ]
+        ]
+    },
+    {
+        "id": "cc8c132ec6145c67",
+        "type": "function",
+        "z": "4b1533c7dd9707a3",
+        "name": "EngyFn",
+        "func": "let voltage = 230;\nlet current = msg.payload.current || 0;\nlet time_ms = 1000;\n\n// Calculate instantaneous energy in mWh\nlet newEnergy = voltage * current * (time_ms / 360000);\n\n// Damping factor (0 = no update, 1 = instant update)\nlet alpha = 0.1;  // Lower value = smoother response\nlet lastEnergy = context.get('lastEnergy') || 0;\n\n// Apply low-pass filter\nlet smoothedEnergy = lastEnergy + alpha * (newEnergy - lastEnergy);\n\n// Store for the next cycle\ncontext.set('lastEnergy', smoothedEnergy);\n\n// Send to gauge\nmsg.payload = parseFloat(smoothedEnergy.toFixed(2));\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 380,
+        "y": 340,
+        "wires": [
+            [
+                "0cc5dd4d8fb034cd",
+                "fb57b8b54f91b3ac"
+            ]
+        ]
+    },
+    {
+        "id": "83262dfdf9f5a19b",
+        "type": "function",
+        "z": "4b1533c7dd9707a3",
+        "name": "SendAnomalyAlert",
+        "func": "let temp = msg.payload.temperature;\nlet curr = msg.payload.current;\n\n// Create an object to store both the anomaly status and the actual values\nlet anomalyData = {\n    anomaly: false,   // Default to no anomaly\n    temperature: temp,\n    current: curr,\n    time: new Date().toLocaleString()\n};\n\n// Check if temperature or current is outside the allowed range\nif (temp < 53 || temp > 57 || curr < 1 || curr > 8) {\n    anomalyData.anomaly = true; // Anomaly detected\n}\n\n// Store the anomaly data in flow context (to track the last email sent time)\nlet lastEmailTime = flow.get('lastEmailTime') || 0;\n\n// If an anomaly is detected and the last email was sent more than 2 minutes ago, trigger the email\nif (anomalyData.anomaly) {\n    let currentTime = Date.now();\n    if (currentTime - lastEmailTime > 5 * 60 * 1000) { // 2 minutes\n        msg.to = \"decentmusicschool@gmail.com\"; // Replace with recipient's email\n        msg.topic = \"⚠️ System Alert: Anomaly Detected\";\n        msg.payload = `An anomaly has been detected in the Process system.\\n\\n\n        🔥 Temperature: ${temp}°C\\n\n        ⚡ Current: ${curr}A\\n\n        🕒 Time: ${anomalyData.time}\\n\\n\n        Immediate attention is required!`;\n\n        // Update the last email sent time\n        flow.set('lastEmailTime', currentTime);\n    } else {\n        // If within 2 minutes, do not send email\n        return null; // End the flow here without sending an email\n    }\n} else {\n    return null; // No anomaly detected, do not send an email\n}\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 390,
+        "y": 440,
+        "wires": [
+            [
+                "b3cd672bb252266a"
+            ]
+        ]
+    },
+    {
+        "id": "a165b9ba19945fd0",
+        "type": "http request",
+        "z": "4b1533c7dd9707a3",
+        "name": "",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "https://api.openweathermap.org/data/2.5/weather?q=Middlesbrough&appid=5634bad250175add7302473433c3c55a&units=metric",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 290,
+        "y": 520,
+        "wires": [
+            [
+                "2d5dc691d8e015b8",
+                "afb0576d6e45fc26",
+                "cce04f909f4ad758"
+            ]
+        ]
+    },
+    {
+        "id": "afb0576d6e45fc26",
+        "type": "function",
+        "z": "4b1533c7dd9707a3",
+        "name": "GetEnvironmentalTemp",
+        "func": "var weatherData = msg.payload;\nvar temp = weatherData.main.temp; // Extract temperature in Celsius\nmsg.payload = temp;\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 570,
+        "y": 560,
+        "wires": [
+            [
+                "f4efac2bd72bf478"
+            ]
+        ]
+    },
+    {
+        "id": "32aa9d7ebf410785",
+        "type": "inject",
+        "z": "4b1533c7dd9707a3",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "1",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 110,
+        "y": 540,
+        "wires": [
+            [
+                "a165b9ba19945fd0"
+            ]
+        ]
+    },
+    {
+        "id": "2d5dc691d8e015b8",
+        "type": "function",
+        "z": "4b1533c7dd9707a3",
+        "name": "CreateSensorDataOnTable",
+        "func": "// Retrieve current data from flow storage\nlet processData = flow.get('processData') || {};\n\n// Current time in desired format\nlet now = new Date();\nlet formattedTime = now.toLocaleTimeString() + \" : \" + now.toLocaleDateString();\n\n// Extract process temperature and current from the JSON payload\nlet processTemperature = msg.payload.processTemperature ?? msg.payload.temperature ?? 0;\nlet current = msg.payload.current ?? 0;\n\n// Debug process values\nnode.warn(\"Process Temperature: \" + processTemperature);\nnode.warn(\"Current: \" + current);\n\n// Extract environmental temperature from the HTTP request (msg.payload is the API response)\nlet environmentalTemperature = msg.payload.main?.temp ?? 0; // Grabs temperature from the weather data\n\n// Retrieve the last stored environmental temperature from flow context\nlet lastEnvironmentalTemperature = flow.get('lastEnvironmentalTemperature') || 0;\n\n// If the environmental temperature is valid and non-zero, update the last stored value\nif (environmentalTemperature !== 0 && environmentalTemperature !== undefined) {\n    lastEnvironmentalTemperature = environmentalTemperature;\n    flow.set('lastEnvironmentalTemperature', lastEnvironmentalTemperature);\n}\n\n// Debug environmental temperature\nnode.warn(\"Environmental Temperature: \" + environmentalTemperature);\nnode.warn(\"Last Environmental Temperature: \" + lastEnvironmentalTemperature);\n\n// Calculate instantaneous energy consumed using process data and current\nlet voltage = 230;  // Assume 230V for energy calculations (adjust if needed)\nlet time_ms = 1000; // Assume time is in seconds (this example is for 1-second sampling)\nlet newEnergy = voltage * current * (time_ms / 360000); // Energy in kWh (adjust formula for actual units)\nnewEnergy = parseFloat(newEnergy.toFixed(2));  // Round to 2 decimal places\n\n// Debug energy calculation\nnode.warn(\"Calculated Energy: \" + newEnergy);\n\n// Apply low-pass filter to smooth energy readings\nlet alpha = 0.1;  // Smoothing factor\nlet lastEnergy = context.get('lastEnergy') || 0;\nlet smoothedEnergy = lastEnergy + alpha * (newEnergy - lastEnergy);\ncontext.set('lastEnergy', smoothedEnergy);\nsmoothedEnergy = parseFloat(smoothedEnergy.toFixed(2));  // Round filtered energy\n\n// Create new entry for the data table with timestamp, process data, and environmental temperature\nlet newEntry = {\n    time: formattedTime,\n    processTemperature: processTemperature,\n    environmentalTemperature: lastEnvironmentalTemperature, // Use the retained environmental temperature\n    current: current,\n    energy: smoothedEnergy\n};\n\n// Debug final entry\nnode.warn(\"New Table Entry: \" + JSON.stringify(newEntry));\n\n// Retrieve existing process data or initialize an empty array\nlet data = flow.get('processData') || [];\n\n// Insert new entry at the top of the data array (latest entry first)\ndata.unshift(newEntry);\n\n// Limit the data array to the latest 1000 entries (keep the table manageable)\nif (data.length > 1000) {\n    data.pop();  // Remove the oldest entry\n}\n\n// Store the updated process data in flow memory\nflow.set('processData', data);\n\n// Send the updated data to the output\nmsg.payload = data;\nmsg.topic = \"processData\";  // Topic to identify the data\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 580,
+        "y": 500,
+        "wires": [
+            [
+                "67e85b773b03760e"
+            ]
+        ]
+    },
+    {
+        "id": "cce04f909f4ad758",
+        "type": "function",
+        "z": "4b1533c7dd9707a3",
+        "name": "PostSensorData2InfluxDB",
+        "func": "// Retrieve current data from flow storage\nlet processData = flow.get('processData') || {};\n\n// Current time in ISO 8601 format (UTC) for debugging\nlet now = new Date();\nlet formattedTime = now.toISOString(); // ISO 8601 format\n\n// Extract process temperature and current from the JSON payload\nlet processTemperature = parseFloat(msg.payload.processTemperature ?? msg.payload.temperature ?? 0);\nlet processCurrent = parseFloat(msg.payload.current ?? 0);\n\n// Debug process values\nnode.warn(\"Process Temperature: \" + processTemperature);\nnode.warn(\"Process Current: \" + processCurrent);\n\n// Extract environmental temperature from the HTTP request (msg.payload is the API response)\nlet environmentalTemperature = parseFloat(msg.payload.main?.temp ?? 0); // Grabs temperature from the weather data\n\n// Retrieve the last stored environmental temperature from flow context\nlet lastEnvironmentalTemperature = flow.get('lastEnvironmentalTemperature') || 0;\n\n// If the environmental temperature is valid and non-zero, update the last stored value\nif (environmentalTemperature !== 0 && environmentalTemperature !== undefined) {\n    lastEnvironmentalTemperature = environmentalTemperature;\n    flow.set('lastEnvironmentalTemperature', lastEnvironmentalTemperature);\n}\n\n// Debug environmental temperature\nnode.warn(\"Environmental Temperature: \" + environmentalTemperature);\nnode.warn(\"Last Environmental Temperature: \" + lastEnvironmentalTemperature);\n\n// Calculate instantaneous energy consumed using process data and current\nlet voltage = 230;  // Assume 230V for energy calculations (adjust if needed)\nlet time_s = 1; // Assume time is in seconds\nlet newEnergy = (voltage * processCurrent * time_s) / 3600; // Convert to kWh\nnewEnergy = parseFloat(newEnergy.toFixed(4));  // Round to 4 decimal places\n\n// Debug energy calculation\nnode.warn(\"Calculated Energy: \" + newEnergy);\n\n// Apply low-pass filter to smooth energy readings\nlet alpha = 0.1;  // Smoothing factor\nlet lastEnergy = context.get('lastEnergy') || 0;\nlet smoothedEnergy = lastEnergy + alpha * (newEnergy - lastEnergy);\ncontext.set('lastEnergy', smoothedEnergy);\nsmoothedEnergy = parseFloat(smoothedEnergy.toFixed(4));  // Round filtered energy\n\n// Format the data in InfluxDB line protocol\nlet lineProtocol = `processmeasure,organization=scada_data processTemperature=${processTemperature},processCurrent=${processCurrent},energyConsumed=${smoothedEnergy},environmentalTemperature=${lastEnvironmentalTemperature} ${Date.now() * 1000000}`;\n\nnode.warn(\"InfluxDB Line Protocol Data: \" + lineProtocol);\n\n// Set up HTTP request details for InfluxDB Cloud\nmsg.method = \"POST\";\nmsg.url = \"https://us-east-1-1.aws.cloud2.influxdata.com/api/v2/write?org=scada_data&bucket=processbucket&precision=ns\";\nmsg.headers = {\n    \"Authorization\": \"Token 7mIUGXiAkLgiWxfszRqEYcPIQt3nzHmQfCgJkCMzq-zK_Bq-maJKaLAxKCDZD_O5_LyKgtmvh5vZwjHv_XDjqg==\",\n    \"Content-Type\": \"text/plain\"\n};\nmsg.payload = lineProtocol;\n\n// Return the message to trigger the HTTP request node in Node-RED\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 330,
+        "y": 600,
+        "wires": [
+            [
+                "e6f76eb04cbb6f49"
+            ]
+        ]
+    },
+    {
+        "id": "e6f76eb04cbb6f49",
+        "type": "http request",
+        "z": "4b1533c7dd9707a3",
+        "name": "",
+        "method": "POST",
+        "ret": "txt",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 650,
+        "y": 600,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "79e334b89ce3f913",
+        "type": "ui_text",
+        "z": "4b1533c7dd9707a3",
+        "group": "5386456fd2d3f64b",
+        "order": 9,
+        "width": "6",
+        "height": "3",
+        "name": "",
+        "label": "Energy Consumed Every 15min",
+        "format": "{{msg.payload}}",
+        "layout": "col-center",
+        "className": "",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 770,
+        "y": 60,
+        "wires": []
+    },
+    {
+        "id": "6db26c0e478979d5",
+        "type": "ui_gauge",
+        "z": "4b1533c7dd9707a3",
+        "name": "",
+        "group": "b49c74d45429c09e",
+        "order": 3,
+        "width": 0,
+        "height": 0,
+        "gtype": "gage",
+        "title": "Process Temp.",
+        "label": "Deg",
+        "format": "{{msg.payload}}",
+        "min": 0,
+        "max": "70",
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": "30",
+        "seg2": "65",
+        "diff": false,
+        "className": "",
+        "x": 660,
+        "y": 120,
+        "wires": []
+    },
+    {
+        "id": "a261134d0962c804",
+        "type": "ui_gauge",
+        "z": "4b1533c7dd9707a3",
+        "name": "",
+        "group": "b49c74d45429c09e",
+        "order": 4,
+        "width": 0,
+        "height": 0,
+        "gtype": "compass",
+        "title": "Current",
+        "label": "Amp",
+        "format": "{{msg.payload}}",
+        "min": 0,
+        "max": "20",
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "diff": false,
+        "className": "",
+        "x": 580,
+        "y": 220,
+        "wires": []
+    },
+    {
+        "id": "0cc5dd4d8fb034cd",
+        "type": "ui_gauge",
+        "z": "4b1533c7dd9707a3",
+        "name": "",
+        "group": "d398c8405bfd7d73",
+        "order": 9,
+        "width": 0,
+        "height": 0,
+        "gtype": "donut",
+        "title": "Instantaneous Energy (mWh)",
+        "label": "mWh",
+        "format": "{{value}} mWh",
+        "min": 0,
+        "max": "20",
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": "8",
+        "seg2": "15",
+        "diff": false,
+        "className": "",
+        "x": 660,
+        "y": 340,
+        "wires": []
+    },
+    {
+        "id": "f4efac2bd72bf478",
+        "type": "ui_gauge",
+        "z": "4b1533c7dd9707a3",
+        "name": "",
+        "group": "68fa80713a3a8fc9",
+        "order": 3,
+        "width": "6",
+        "height": "2",
+        "gtype": "wave",
+        "title": "Site_Enviroment Temp.",
+        "label": "Deg",
+        "format": "{{msg.payload}}",
+        "min": "-10",
+        "max": "20",
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": "30",
+        "seg2": "65",
+        "diff": false,
+        "className": "",
+        "x": 830,
+        "y": 540,
+        "wires": []
+    },
+    {
+        "id": "4f528f11cab02321",
+        "type": "ui_chart",
+        "z": "4b1533c7dd9707a3",
+        "name": "",
+        "group": "35fc2f7b3cae9cc9",
+        "order": 1,
+        "width": "6",
+        "height": "3",
+        "label": "Temp Log",
+        "chartType": "line",
+        "legend": "true",
+        "xformat": "HH:mm",
+        "interpolate": "linear",
+        "nodata": "",
+        "dot": false,
+        "ymin": "0",
+        "ymax": "70",
+        "removeOlder": 1,
+        "removeOlderPoints": "",
+        "removeOlderUnit": "60",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#1f77b4",
+            "#aec7e8",
+            "#ff7f0e",
+            "#2ca02c",
+            "#98df8a",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "className": "",
+        "x": 720,
+        "y": 180,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "a6cd72f44ebe297f",
+        "type": "ui_chart",
+        "z": "4b1533c7dd9707a3",
+        "name": "",
+        "group": "35fc2f7b3cae9cc9",
+        "order": 1,
+        "width": "6",
+        "height": "3",
+        "label": "Current Log",
+        "chartType": "line",
+        "legend": "true",
+        "xformat": "HH:mm",
+        "interpolate": "linear",
+        "nodata": "",
+        "dot": false,
+        "ymin": "0",
+        "ymax": "10",
+        "removeOlder": 1,
+        "removeOlderPoints": "",
+        "removeOlderUnit": "60",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#1f77b4",
+            "#aec7e8",
+            "#ff7f0e",
+            "#2ca02c",
+            "#98df8a",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "className": "",
+        "x": 650,
+        "y": 280,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "fb57b8b54f91b3ac",
+        "type": "ui_chart",
+        "z": "4b1533c7dd9707a3",
+        "name": "",
+        "group": "d398c8405bfd7d73",
+        "order": 1,
+        "width": 0,
+        "height": 0,
+        "label": "Energy Log",
+        "chartType": "line",
+        "legend": "true",
+        "xformat": "HH:mm",
+        "interpolate": "linear",
+        "nodata": "",
+        "dot": false,
+        "ymin": "0",
+        "ymax": "20",
+        "removeOlder": 1,
+        "removeOlderPoints": "",
+        "removeOlderUnit": "60",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#1f77b4",
+            "#aec7e8",
+            "#ff7f0e",
+            "#2ca02c",
+            "#98df8a",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "className": "",
+        "x": 610,
+        "y": 380,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "67e85b773b03760e",
+        "type": "ui_table",
+        "z": "4b1533c7dd9707a3",
+        "group": "5386456fd2d3f64b",
+        "name": "",
+        "order": 13,
+        "width": "6",
+        "height": "6",
+        "columns": [
+            {
+                "field": "time",
+                "title": "Tim",
+                "width": "",
+                "align": "left",
+                "formatter": "plaintext",
+                "formatterParams": {
+                    "target": "_blank"
+                }
+            },
+            {
+                "field": "processTemperature",
+                "title": "PrT",
+                "width": "",
+                "align": "left",
+                "formatter": "plaintext",
+                "formatterParams": {
+                    "target": "_blank"
+                }
+            },
+            {
+                "field": "environmentalTemperature",
+                "title": "EvT",
+                "width": "",
+                "align": "left",
+                "formatter": "plaintext",
+                "formatterParams": {
+                    "target": "_blank"
+                }
+            },
+            {
+                "field": "current",
+                "title": "Cur",
+                "width": "",
+                "align": "left",
+                "formatter": "plaintext",
+                "formatterParams": {
+                    "target": "_blank"
+                }
+            },
+            {
+                "field": "energy",
+                "title": "Egy",
+                "width": "",
+                "align": "left",
+                "formatter": "plaintext",
+                "formatterParams": {
+                    "target": "_blank"
+                }
+            }
+        ],
+        "outputs": 0,
+        "cts": false,
+        "x": 830,
+        "y": 500,
+        "wires": []
+    },
+    {
+        "id": "b3cd672bb252266a",
+        "type": "e-mail",
+        "z": "4b1533c7dd9707a3",
+        "server": "smtp.gmail.com",
+        "port": "465",
+        "authtype": "BASIC",
+        "saslformat": true,
+        "token": "oauth2Response.access_token",
+        "secure": true,
+        "tls": true,
+        "name": "",
+        "dname": "",
+        "x": 670,
+        "y": 440,
+        "wires": []
+    },
+    {
+        "id": "8696f077d6d01ff9",
+        "type": "mqtt in",
+        "z": "4b1533c7dd9707a3",
+        "name": "",
+        "topic": "sensors/data",
+        "qos": "2",
+        "datatype": "utf8",
+        "broker": "1ed5ddec72cdc3a9",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 90,
+        "y": 240,
+        "wires": [
+            [
+                "7c435a1ea8fc3823"
+            ]
+        ]
+    },
+    {
+        "id": "be4dc04b8741d3e0",
+        "type": "serial-port",
+        "name": "Ardn",
+        "serialport": "COM5",
+        "serialbaud": "9600",
+        "databits": "8",
+        "parity": "none",
+        "stopbits": "1",
+        "waitfor": "",
+        "dtr": "none",
+        "rts": "none",
+        "cts": "none",
+        "dsr": "none",
+        "newline": "\\n",
+        "bin": "false",
+        "out": "char",
+        "addchar": "",
+        "responsetimeout": "10000"
+    },
+    {
+        "id": "5386456fd2d3f64b",
+        "type": "ui_group",
+        "name": "AI Panel",
+        "tab": "af9833d74b881ab4",
+        "order": 4,
+        "disp": true,
+        "width": "6",
+        "collapse": true,
+        "className": ""
+    },
+    {
+        "id": "b49c74d45429c09e",
+        "type": "ui_group",
+        "name": "Online SCADA",
+        "tab": "af9833d74b881ab4",
+        "order": 1,
+        "disp": true,
+        "width": "6",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "d398c8405bfd7d73",
+        "type": "ui_group",
+        "name": "Energy Panel",
+        "tab": "af9833d74b881ab4",
+        "order": 3,
+        "disp": true,
+        "width": "6",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "68fa80713a3a8fc9",
+        "type": "ui_group",
+        "name": "Adaptive Power Management",
+        "tab": "af9833d74b881ab4",
+        "order": 5,
+        "disp": true,
+        "width": "6",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "35fc2f7b3cae9cc9",
+        "type": "ui_group",
+        "name": "Historical LOG",
+        "tab": "af9833d74b881ab4",
+        "order": 2,
+        "disp": true,
+        "width": "6",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "1ed5ddec72cdc3a9",
+        "type": "mqtt-broker",
+        "name": "",
+        "broker": "172.20.10.7",
+        "port": 1883,
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": 4,
+        "keepalive": 60,
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "af9833d74b881ab4",
+        "type": "ui_tab",
+        "name": "Process Control SCADA and IOT PAGE",
+        "icon": "",
+        "disabled": false,
+        "hidden": false
+    }
+]
