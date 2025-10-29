@@ -43,7 +43,7 @@ st.title("Energy Consumption Predictor")
 
 st.markdown(
     """
-    - **This tool is a predictive web interface developed as part of an AI-enabled, low-cost IIoT SCADA system design.**  
+    **This tool is a predictive web interface developed as part of an AI-enabled, low-cost IIoT SCADA system design.**  
     - It forecasts energy consumption from **process temperature** and **environmental temperature**.  
     - Built from a **Random Forest regression model** trained on **704 records**.  
     - Intended for **demo and decision support**; treat forecasts as guidance, not guarantees.
@@ -160,6 +160,7 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
 
 
 
