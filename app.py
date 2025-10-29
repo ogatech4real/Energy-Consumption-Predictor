@@ -48,7 +48,7 @@ st.markdown(
 
 with st.expander("About this tool", expanded=True):
     st.markdown(
-        "- **This tool is a predictive web interface developed as part of an AI-enabled, low-cost IIoT SCADA system design**.\n
+        "- **This tool is a predictive web interface developed as part of an AI-enabled, low-cost IIoT SCADA system design**.\n"
         "- It Forecasts energy consumption from **process temperature** and **environmental temperature**.\n"
         "- Built from a Random Forest regression model trained on **704 records**.\n"
         "- It is intended for demo and decision support; treat forecasts as guidance, not guarantees."
@@ -156,4 +156,5 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
 
