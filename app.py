@@ -42,25 +42,35 @@ if "history" not in st.session_state:
 st.title("Energy Consumption Predictor")
 
 st.markdown(
-        "- **This tool is a predictive web interface developed as part of an AI-enabled, low-cost IIoT SCADA system design**.\n"
-        "- It Forecasts energy consumption from **process temperature** and **environmental temperature**.\n"
-        "- Built from a Random Forest regression model trained on **704 records**.\n"
-        "- It is intended for demo and decision support; treat forecasts as guidance, not guarantees."
-    )
-    st.markdown(
-        '<div class="link-list">'
-        'Read more here: <a href="https://bit.ly/Open_Source_SCADA" target="_blank">https://bit.ly/Open_Source_SCADA</a> &nbsp;&nbsp; '
-        '</div>',
-        unsafe_allow_html=True
-    )
-    st.markdown(
-        '<span class="pill">Model: Random Forest</span>'
-        '<span class="pill">Framework: Scikit-learn</span>'
-        '<span class="pill">Unit: kWh</span>',
-        unsafe_allow_html=True
-    )
+    """
+    - **This tool is a predictive web interface developed as part of an AI-enabled, low-cost IIoT SCADA system design.**  
+    - It forecasts energy consumption from **process temperature** and **environmental temperature**.  
+    - Built from a **Random Forest regression model** trained on **704 records**.  
+    - Intended for **demo and decision support**; treat forecasts as guidance, not guarantees.
+    """
+)
+
+st.markdown(
+    """
+    <div class="link-list">
+        Read more here: <a href="https://bit.ly/Open_Source_SCADA" target="_blank">
+        https://bit.ly/Open_Source_SCADA</a>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+st.markdown(
+    """
+    <span class="pill">Model: Random Forest</span>
+    <span class="pill">Framework: Scikit-learn</span>
+    <span class="pill">Unit: kWh</span>
+    """,
+    unsafe_allow_html=True
+)
 
 st.markdown("---")
+
 
 # ---------------- Inputs (single column) ----------------
 proc_temp = st.slider(
@@ -150,6 +160,7 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
 
 
 
