@@ -48,15 +48,14 @@ st.markdown(
 
 with st.expander("About this tool", expanded=True):
     st.markdown(
-        "- Forecasts energy consumption from **process temperature** and **environmental temperature**.\n"
+        "- **This tool is a predictive web interface developed as part of an AI-enabled, low-cost IIoT SCADA system design**.\n
+        "- It Forecasts energy consumption from **process temperature** and **environmental temperature**.\n"
         "- Built from a Random Forest regression model trained on **704 records**.\n"
-        "- Intended for demo and decision support; treat forecasts as guidance, not guarantees."
+        "- It is intended for demo and decision support; treat forecasts as guidance, not guarantees."
     )
     st.markdown(
         '<div class="link-list">'
-        '📘 Paper summary: <a href="https://bit.ly/Open_Source_SCADA" target="_blank">https://bit.ly/Open_Source_SCADA</a> &nbsp;&nbsp; '
-        '💻 Source: <a href="https://github.com/ogatech4real/Energy-Consumption-Predictor" target="_blank">GitHub repo</a> &nbsp;&nbsp; '
-        '🧪 Live demo: <a href="#" target="_blank">Streamlit Cloud URL</a>'
+        'Read more here: <a href="https://bit.ly/Open_Source_SCADA" target="_blank">https://bit.ly/Open_Source_SCADA</a> &nbsp;&nbsp; '
         '</div>',
         unsafe_allow_html=True
     )
@@ -157,3 +156,4 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
