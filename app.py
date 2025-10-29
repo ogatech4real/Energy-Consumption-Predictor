@@ -46,7 +46,7 @@ st.markdown(
         "- It Forecasts energy consumption from **process temperature** and **environmental temperature**.\n"
         "- Built from a Random Forest regression model trained on **704 records**.\n"
         "- It is intended for demo and decision support; treat forecasts as guidance, not guarantees."
-)
+    )
     st.markdown(
         '<div class="link-list">'
         'Read more here: <a href="https://bit.ly/Open_Source_SCADA" target="_blank">https://bit.ly/Open_Source_SCADA</a> &nbsp;&nbsp; '
@@ -150,6 +150,7 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
 
 
 
